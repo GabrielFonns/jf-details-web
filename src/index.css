@@ -1,0 +1,10 @@
+/* Importa o Tailwind (Sintaxe v4) */
+
+@import "tailwindcss";
+
+/* Cria a nossa paleta de cores da JF Details */
+@theme {
+  --color-dourado: #C5A059;
+  --color-escuro: #111111;
+  --color-chumbo: #1A1A1A;
+}
