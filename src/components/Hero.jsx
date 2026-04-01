@@ -16,7 +16,7 @@ function Hero({ onBookingClick }) {
         </h1>
 
         <p className="text-lg md:text-xl text-gray-200 mb-12 max-w-2xl mx-auto drop-shadow-lg font-light tracking-wide">
-          Restauramos a beleza original do seu veículo com técnicas exclusivas e os melhores produtos do mundo.
+          Restauramos a beleza original do seu veículo com técnicas exclusivas e os melhores produtos do mercado automotivo.
         </p>
 
         {/* BOTÃO RETANGULAR: Usei rounded-md ao invés de rounded-full */}

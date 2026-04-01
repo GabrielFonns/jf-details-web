@@ -1,19 +1,38 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 function BookingModal({ isOpen, onClose }) {
   const [formData, setFormData] = useState({
     nomeCliente: '', telefone: '', modeloCarro: '', servico: '', data: '', hora: '', observacoes: ''
   })
 
-  const [agendamentosRealizados, setAgendamentosRealizados] = useState([]);
+  // NOVA VARIÁVEL: Guarda apenas os horários que o Java disser que estão ocupados
+  const [horariosOcupados, setHorariosOcupados] = useState([]);
 
   const horariosDisponiveis = [
     "08:00", "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00"
   ];
 
+  // --- O NOVO CÉREBRO: Consulta o Java sempre que a data mudar ---
+  useEffect(() => {
+    if (formData.data) {
+      // CORREÇÃO AQUI: Troquei aspas simples por crase para a variável funcionar!
+      fetch(`https://jf-details-api.onrender.com/agendamentos/ocupados?data=${formData.data}`)
+        .then(res => res.json())
+        .then(dados => {
+          // O Java devolve horas no formato "10:00:00" ou "10:00".
+          // O substring(0, 5) garante que vamos pegar só o "10:00" para bater com o nosso select.
+          const horasFormatadas = dados.map(h => h.substring(0, 5));
+          setHorariosOcupados(horasFormatadas);
+        })
+        .catch(err => console.error("Erro ao buscar horários no Java:", err));
+    } else {
+      setHorariosOcupados([]); // Limpa se não tiver data
+    }
+  }, [formData.data]);
+  // ---------------------------------------------------------------
+
   if (!isOpen) return null;
 
-  // --- A MÁGICA DO TEMPO COMEÇA AQUI ---
   const agora = new Date();
   const ano = agora.getFullYear();
   const mes = String(agora.getMonth() + 1).padStart(2, '0');
@@ -21,11 +40,6 @@ function BookingModal({ isOpen, onClose }) {
 
   const dataDeHojeStr = `${ano}-${mes}-${dia}`;
   const horaAtual = agora.getHours();
-  // ---------------------------------------
-
-  const ocupadosNestaData = agendamentosRealizados
-    .filter(agendamento => agendamento.data === formData.data)
-    .map(agendamento => agendamento.hora);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -46,15 +60,13 @@ function BookingModal({ isOpen, onClose }) {
     }
 
     try {
-      const resposta = await fetch('http://localhost:8080/agendamentos', {
+      const resposta = await fetch('https://jf-details-api.onrender.com/agendamentos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(dadosParaEnviar)
       })
 
       if (resposta.status === 201) {
-
-        setAgendamentosRealizados([...agendamentosRealizados, { data: formData.data, hora: formData.hora }]);
 
         const dataFormatadaBr = formData.data.split('-').reverse().join('/');
 
@@ -64,14 +76,11 @@ function BookingModal({ isOpen, onClose }) {
         const numeroJFDetails = "5515998390907";
         const linkWhatsApp = `https://wa.me/${numeroJFDetails}?text=${textoCodificado}`;
 
-        // MUDANÇA 1: Alerta o usuário antes de sair da página
         alert("Agendamento registrado com sucesso! Vamos concluir no WhatsApp.");
 
-        // MUDANÇA 2: Limpa o formulário e fecha o modal para deixar tudo pronto para o próximo
         setFormData({ nomeCliente: '', telefone: '', modeloCarro: '', servico: '', data: '', hora: '', observacoes: '' })
         onClose();
 
-        // MUDANÇA 3: O REDIRECIONAMENTO NA MESMA ABA (Burla bloqueador de pop-ups)
         window.location.href = linkWhatsApp;
 
       } else {
@@ -136,7 +145,8 @@ function BookingModal({ isOpen, onClose }) {
                 </option>
 
                 {horariosDisponiveis.map((horaOpcao) => {
-                  const taOcupado = ocupadosNestaData.includes(horaOpcao);
+                  // Agora ele verifica direto na lista que veio do Banco de Dados!
+                  const taOcupado = horariosOcupados.includes(horaOpcao);
                   const isHoje = formData.data === dataDeHojeStr;
                   const horaDoSelect = parseInt(horaOpcao.split(':')[0], 10);
                   const tempoEsgotado = isHoje && (horaDoSelect <= horaAtual);
